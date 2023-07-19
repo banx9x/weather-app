@@ -1,42 +1,77 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.forcecast {
+    display: grid;
+    grid-template-areas:
+        "current current current current current current"
+        "hourly hourly hourly hourly windy windy"
+        "daily daily uv sunrise windy windy"
+        "daily daily wind waxing precipitation feels_like"
+        "daily daily humidity visibility pressure average";
+    grid-template-columns: repeat(6, 150px);
+    grid-template-rows: repeat(5, 150px);
+    gap: 20px;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.current {
+    grid-area: current;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
 }
 
-.card {
-  padding: 2em;
+.current .city {
+    font-size: 24px;
+    text-transform: uppercase;
 }
 
-.read-the-docs {
-  color: #888;
+.current .temp {
+    font-size: 60px;
+}
+
+.current .status {
+    font-size: 18px;
+    text-transform: uppercase;
+}
+
+.hourly {
+    grid-area: hourly;
+    background-color: rgba(78, 20, 53, 0.15);
+    border-radius: 20px;
+    padding: 10px;
+}
+
+.hourly .hourly-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.hourly .weather-icon {
+    width: 30px;
+}
+
+.hourly-list {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+}
+
+.hourly-list .hourly-item {
+    padding: 20px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.hourly .hourly-item-icon {
+    width: 30px;
 }

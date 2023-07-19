@@ -1,92 +1,8 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-interface Coordinates {
-    lat: number;
-    lon: number;
-}
-
-interface WeatherData {
-    id: number;
-    main: string;
-    description: string;
-    icon: string;
-}
-
-interface CurrentData {
-    dt: number;
-    sunrise: number;
-    sunset: number;
-    temp: number;
-    feels_like: number;
-    pressure: number;
-    humidity: number;
-    dew_point: number;
-    uvi: number;
-    clouds: number;
-    visibility: number;
-    wind_speed: number;
-    wind_deg: number;
-    wind_gust: number;
-    weather: WeatherData[];
-}
-
-interface MinuteData {
-    dt: number;
-    precipitation: number;
-}
-
-interface HourData extends CurrentData {
-    pop: number;
-    rain: {
-        [key: string]: number;
-    };
-}
-
-interface TempData {
-    day: number;
-    min: number;
-    max: number;
-    night: number;
-    eve: number;
-    morn: number;
-}
-
-interface FeelsLike {
-    day: number;
-    night: number;
-    eve: number;
-    morn: number;
-}
-
-interface DailyData extends Omit<CurrentData, "temp" | "feels_like"> {
-    moonrise: number;
-    moonset: number;
-    moon_phase: number;
-    summary: string;
-    temp: TempData;
-    feels_like: FeelsLike;
-    pop: number;
-    rain: number;
-}
-
-interface ForceCastData {
-    lat: number;
-    lon: number;
-    timezone: string;
-    timezone_offset: number;
-    current: CurrentData;
-    minutely: MinuteData[];
-    hourly: HourData[];
-    daily: DailyData[];
-}
-
-interface City extends Coordinates {
-    name: string;
-    local_names: {
-        [key: string]: string;
-    };
-    country: string;
+interface Sun {
+    [key: string]: Pick<CurrentData, "sunrise" | "sunset">;
 }
 
 function App() {
@@ -139,14 +55,121 @@ function App() {
         }
     }, []);
 
-    console.log(forceCastData);
-    console.log(city);
+    if (!city || !forceCastData) {
+        return null;
+    }
+
+    const sun: Sun =
+        forceCastData?.daily.reduce((result, data) => {
+            const date = new Date(data.dt * 1000);
+
+            result[date.getDate()] = {
+                sunrise: data.sunrise,
+                sunset: data.sunset,
+            };
+
+            return result;
+        }, {} as Sun) || {};
+
+    console.log("Sun", sun);
 
     return (
-        <>
-            <h1>Lat: {city?.lat}</h1>
-            <h1>Lon: {city?.lon}</h1>
-        </>
+        <div className="forcecast">
+            <div className="current">
+                <div className="city">
+                    {city?.name}, {city?.country}
+                </div>
+                <div className="temp">
+                    {forceCastData && Math.round(forceCastData.current.temp)}
+                    &deg;
+                </div>
+                <div className="status">
+                    {forceCastData?.current.weather[0].main}
+                </div>
+            </div>
+
+            <div className="hourly">
+                <div className="hourly-title">
+                    {forceCastData && (
+                        <img
+                            className="weather-icon"
+                            src={`https://openweathermap.org/img/wn/${forceCastData.current.weather[0].icon}@2x.png`}
+                            alt={forceCastData.current.weather[0].main}
+                        />
+                    )}
+                    {forceCastData && forceCastData.current.weather[0].main}
+                </div>
+
+                <div className="hourly-list">
+                    {forceCastData &&
+                        forceCastData.hourly.map((data) => {
+                            const date = new Date(data.dt * 1000);
+
+                            const { sunrise, sunset } = sun[date.getDate()];
+                            const sunriseTime = new Date(sunrise * 1000);
+                            const sunsetTime = new Date(sunset * 1000);
+
+                            console.log(
+                                sunriseTime.getHours() - date.getHours()
+                            );
+
+                            return (
+                                <>
+                                    <div className="hourly-item">
+                                        <div className="hourly-item-time">
+                                            {new Date(
+                                                data.dt * 1000
+                                            ).getHours()}
+                                        </div>
+                                        <img
+                                            className="hourly-item-icon"
+                                            src={`https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`}
+                                        />
+                                        <div className="hourly-item-temp">
+                                            {Math.round(data.temp)}&deg;
+                                        </div>
+                                    </div>
+                                    {0 <=
+                                        sunriseTime.getHours() -
+                                            date.getHours() &&
+                                        sunriseTime.getHours() -
+                                            date.getHours() <
+                                            1 && (
+                                            <div className="sunrise">
+                                                <div className="sunrise-time">
+                                                    {sunriseTime.getHours()}:
+                                                    {sunriseTime.getMinutes()}
+                                                </div>
+                                                MTM
+                                                <div className="sunrise-title">
+                                                    Sunrise
+                                                </div>
+                                            </div>
+                                        )}
+
+                                    {0 <=
+                                        sunsetTime.getHours() -
+                                            date.getHours() &&
+                                        sunsetTime.getHours() -
+                                            date.getHours() <
+                                            1 && (
+                                            <div className="sunset">
+                                                <div className="sunset-time">
+                                                    {sunsetTime.getHours()}:
+                                                    {sunsetTime.getMinutes()}
+                                                </div>
+                                                MTM
+                                                <div className="sunset-title">
+                                                    Sunset
+                                                </div>
+                                            </div>
+                                        )}
+                                </>
+                            );
+                        })}
+                </div>
+            </div>
+        </div>
     );
 }
 
