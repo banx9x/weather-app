@@ -4,13 +4,22 @@
     padding: 0;
 }
 
-.forcecast {
+body {
+    background-color: #121525;
+    color: #ffffff;
+    font-family: "Poppins", sans-serif;
+    font-weight: 300;
+    font-size: 16px;
+    line-height: 1.4;
+}
+
+/* .forcecast {
     display: grid;
     grid-template-areas:
         "current current current current current current"
         "hourly hourly hourly hourly windy windy"
-        "daily daily uv sunrise windy windy"
-        "daily daily wind waxing precipitation feels_like"
+        "daily daily uv wind windy windy"
+        "daily daily sunrise sunset precipitation feels_like"
         "daily daily humidity visibility pressure average";
     grid-template-columns: repeat(6, 150px);
     grid-template-rows: repeat(5, 150px);
@@ -18,6 +27,12 @@
     width: fit-content;
     margin-left: auto;
     margin-right: auto;
+} */
+
+.grid-item {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 10px;
 }
 
 .current {
@@ -35,6 +50,14 @@
 
 .current .temp {
     font-size: 60px;
+    position: relative;
+}
+
+.current .temp::after {
+    content: "°";
+    position: absolute;
+    right: -24px;
+    top: -5px;
 }
 
 .current .status {
@@ -44,34 +67,87 @@
 
 .hourly {
     grid-area: hourly;
-    background-color: rgba(78, 20, 53, 0.15);
-    border-radius: 20px;
-    padding: 10px;
 }
 
-.hourly .hourly-title {
+.title {
     display: flex;
     align-items: center;
-    gap: 10px;
+    padding: 0 10px;
+    color: #6e5e68;
 }
 
-.hourly .weather-icon {
+.icon {
     width: 30px;
+    height: 30px;
+    object-fit: contain;
+}
+
+.title .icon {
+    margin-bottom: 2px;
 }
 
 .hourly-list {
     display: flex;
     flex-wrap: nowrap;
     overflow-x: auto;
+    height: 98px;
+    overflow: hidden;
 }
 
 .hourly-list .hourly-item {
-    padding: 20px 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.hourly .sunrise,
+.hourly .sunset {
+    padding: 10px 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
-.hourly .hourly-item-icon {
-    width: 30px;
+.windy {
+    grid-area: windy;
+}
+
+.windy .title .icon,
+.uv .title .icon,
+.wind-speed .title .icon,
+.sunrise .title .icon,
+.sunset .title .icon {
+    margin-right: 4px;
+}
+
+.windy iframe {
+    border: 0;
+    border-radius: 20px;
+}
+
+.uv {
+    grid-area: uv;
+}
+
+.value {
+    font-size: 48px;
+    line-height: 1;
+}
+
+.value .unit {
+    font-size: 16px;
+}
+
+.wind-speed {
+    grid-area: wind;
+}
+
+.sunrise {
+    grid-area: sunrise;
+}
+
+.sunset {
+    grid-area: sunset;
 }

@@ -1,65 +1,74 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import sunriseIcon from "@assets/sunrise.png";
+import sunsetIcon from "@assets/sunset.png";
+import windIcon from "@assets/wind.png";
+import useForceCastData from "@/useForceCastData";
+import useCityData from "@/useCityData";
+import Widget from "@/components/atoms/Widget";
+import WidgetTitle from "@/components/atoms/WidgetTitle";
+import ForceCast from "@components/templates/ForceCast";
+import WidgetValue from "@components/atoms/WidgetValue";
+import UVWidget from "@components/organisms/UVWidget";
+import WindSpeedWidget from "@components/organisms/WindSpeedWidget";
+import WindyWidget from "@components/organisms/WindyWidget";
+import FeelsLikeWidget from "@components/organisms/FeelsLikeWidget";
+import Humidity from "./components/organisms/Humidity";
 
 interface Sun {
     [key: string]: Pick<CurrentData, "sunrise" | "sunset">;
 }
 
+const defaultCoordinates: Coordinates = {
+    lat: 21.028511,
+    lon: 105.804817,
+};
+
 function App() {
-    const [city, setCity] = useState<City | null>(null);
-    const [forceCastData, setForceCastData] = useState<ForceCastData | null>(
-        null
-    );
+    const [isRequestGeolocation, setIsRequestGeolocation] =
+        useState<boolean>(true);
+    const [coordinates, setCoordinates] =
+        useState<Coordinates>(defaultCoordinates);
 
-    const fetchForceCastData = async (coordinates: Coordinates) => {
-        const url = new URL("https://api.openweathermap.org/data/3.0/onecall");
-        url.searchParams.append("lat", coordinates.lat.toString());
-        url.searchParams.append("lon", coordinates.lon.toString());
-        url.searchParams.append("appid", import.meta.env.VITE_APPID);
-        url.searchParams.append("units", "metric");
-        url.searchParams.append("lang", "vi");
-
-        const res = await fetch(url);
-        const data: ForceCastData = (await res.json()) as ForceCastData;
-        setForceCastData(data);
-    };
-
-    const fetchCityData = async (coordinates: Coordinates) => {
-        const url = new URL("http://api.openweathermap.org/geo/1.0/reverse");
-        url.searchParams.append("lat", coordinates.lat.toString());
-        url.searchParams.append("lon", coordinates.lon.toString());
-        url.searchParams.append("appid", import.meta.env.VITE_APPID);
-        url.searchParams.append("limit", "1");
-
-        const res = await fetch(url);
-        const data: City[] = (await res.json()) as City[];
-        setCity(data[0]);
-    };
+    const {
+        isLoading: isLoadingCity,
+        isError: isLoadingCityError,
+        data: cityData,
+    } = useCityData(coordinates);
+    const {
+        isLoading: isLoadingForceCast,
+        isError: isLoadingForceCastError,
+        data: forceCastData,
+    } = useForceCastData(coordinates);
 
     useEffect(() => {
         if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition((position) => {
-                const coordinates = {
-                    lat: position.coords.latitude,
-                    lon: position.coords.longitude,
-                };
-
-                fetchForceCastData(coordinates).catch((error) =>
-                    console.error(error)
-                );
-
-                fetchCityData(coordinates).catch((error) =>
-                    console.error(error)
-                );
-            });
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const coordinates = {
+                        lat: position.coords.latitude,
+                        lon: position.coords.longitude,
+                    };
+                    setCoordinates(coordinates);
+                    setIsRequestGeolocation(false);
+                },
+                (error) => {
+                    console.error(error);
+                    setIsRequestGeolocation(false);
+                }
+            );
         }
     }, []);
 
-    if (!city || !forceCastData) {
-        return null;
+    if (isRequestGeolocation) {
+        return (
+            <div className="App">
+                <h1>Accept location</h1>
+            </div>
+        );
     }
 
-    const sun: Sun =
+    const twilight: Sun =
         forceCastData?.daily.reduce((result, data) => {
             const date = new Date(data.dt * 1000);
 
@@ -71,50 +80,46 @@ function App() {
             return result;
         }, {} as Sun) || {};
 
-    console.log("Sun", sun);
-
     return (
-        <div className="forcecast">
-            <div className="current">
-                <div className="city">
-                    {city?.name}, {city?.country}
-                </div>
-                <div className="temp">
-                    {forceCastData && Math.round(forceCastData.current.temp)}
-                    &deg;
-                </div>
-                <div className="status">
-                    {forceCastData?.current.weather[0].main}
-                </div>
-            </div>
+        <ForceCast>
+            <Widget area="search"></Widget>
+            <Widget area="current"></Widget>
 
-            <div className="hourly">
-                <div className="hourly-title">
+            <Widget area="hourly"></Widget>
+            <WindyWidget lat={cityData?.lat} lon={cityData?.lon} />
+            <Widget area="daily"></Widget>
+            <Widget area="sunrise"></Widget>
+            <Widget area="sunset"></Widget>
+            <UVWidget value={forceCastData?.current.uvi} />
+
+            <WindSpeedWidget value={forceCastData?.current.wind_speed} />
+            <Widget area="precipitation"></Widget>
+            <FeelsLikeWidget value={forceCastData?.current.feels_like} />
+            <Humidity value={forceCastData?.current.humidity} />
+            <Widget area="visibility"></Widget>
+            <Widget area="pressure"></Widget>
+            <Widget area="average"></Widget>
+
+            {/* <div className="grid-item hourly">
+                <div className="title">
                     {forceCastData && (
                         <img
-                            className="weather-icon"
+                            className="icon"
                             src={`https://openweathermap.org/img/wn/${forceCastData.current.weather[0].icon}@2x.png`}
                             alt={forceCastData.current.weather[0].main}
                         />
                     )}
                     {forceCastData && forceCastData.current.weather[0].main}
                 </div>
-
                 <div className="hourly-list">
                     {forceCastData &&
                         forceCastData.hourly.map((data) => {
                             const date = new Date(data.dt * 1000);
 
-                            const { sunrise, sunset } = sun[date.getDate()];
-                            const sunriseTime = new Date(sunrise * 1000);
-                            const sunsetTime = new Date(sunset * 1000);
+                            const twilight = sun[date.getDate()];
 
-                            console.log(
-                                sunriseTime.getHours() - date.getHours()
-                            );
-
-                            return (
-                                <>
+                            if (!twilight) {
+                                return (
                                     <div className="hourly-item">
                                         <div className="hourly-item-time">
                                             {new Date(
@@ -122,54 +127,143 @@ function App() {
                                             ).getHours()}
                                         </div>
                                         <img
-                                            className="hourly-item-icon"
+                                            className="icon"
                                             src={`https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`}
                                         />
                                         <div className="hourly-item-temp">
                                             {Math.round(data.temp)}&deg;
                                         </div>
                                     </div>
-                                    {0 <=
-                                        sunriseTime.getHours() -
-                                            date.getHours() &&
-                                        sunriseTime.getHours() -
-                                            date.getHours() <
-                                            1 && (
-                                            <div className="sunrise">
-                                                <div className="sunrise-time">
-                                                    {sunriseTime.getHours()}:
-                                                    {sunriseTime.getMinutes()}
-                                                </div>
-                                                MTM
-                                                <div className="sunrise-title">
-                                                    Sunrise
-                                                </div>
-                                            </div>
-                                        )}
+                                );
+                            } else {
+                                const { sunrise, sunset } = twilight;
+                                const sunriseTime = new Date(sunrise * 1000);
+                                const sunsetTime = new Date(sunset * 1000);
 
-                                    {0 <=
-                                        sunsetTime.getHours() -
-                                            date.getHours() &&
-                                        sunsetTime.getHours() -
-                                            date.getHours() <
-                                            1 && (
-                                            <div className="sunset">
-                                                <div className="sunset-time">
-                                                    {sunsetTime.getHours()}:
-                                                    {sunsetTime.getMinutes()}
-                                                </div>
-                                                MTM
-                                                <div className="sunset-title">
-                                                    Sunset
-                                                </div>
+                                return (
+                                    <>
+                                        <div className="hourly-item">
+                                            <div className="hourly-item-time">
+                                                {new Date(
+                                                    data.dt * 1000
+                                                ).getHours()}
                                             </div>
-                                        )}
-                                </>
-                            );
+                                            <img
+                                                className="icon"
+                                                src={`https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`}
+                                            />
+                                            <div className="hourly-item-temp">
+                                                {Math.round(data.temp)}&deg;
+                                            </div>
+                                        </div>
+                                        {0 <=
+                                            sunriseTime.getHours() -
+                                                date.getHours() &&
+                                            sunriseTime.getHours() -
+                                                date.getHours() <
+                                                1 && (
+                                                <div className="sunrise">
+                                                    <div className="sunrise-time">
+                                                        {sunriseTime.getHours()}
+                                                        :
+                                                        {sunriseTime.getMinutes()}
+                                                    </div>
+                                                    <img
+                                                        className="icon"
+                                                        src={sunriseIcon}
+                                                        alt="Sunrise"
+                                                    />
+                                                    <div className="sunrise-title">
+                                                        Sunrise
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                        {0 <=
+                                            sunsetTime.getHours() -
+                                                date.getHours() &&
+                                            sunsetTime.getHours() -
+                                                date.getHours() <
+                                                1 && (
+                                                <div className="sunset">
+                                                    <div className="sunset-time">
+                                                        {sunsetTime.getHours()}:
+                                                        {sunsetTime.getMinutes()}
+                                                    </div>
+                                                    <img
+                                                        className="icon"
+                                                        src={sunsetIcon}
+                                                        alt="Sunset"
+                                                    />
+                                                    <div className="sunset-title">
+                                                        Sunset
+                                                    </div>
+                                                </div>
+                                            )}
+                                    </>
+                                );
+                            }
                         })}
                 </div>
+                C
             </div>
-        </div>
+
+            <div className="grid-item windy">
+                <div className="title">
+                    <img className="icon" src={windIcon} alt="Windy" />
+                    Windy
+                </div>
+
+                
+            </div>
+
+            <div className="grid-item uv">
+                <div className="title">
+                    <img className="icon" src={windIcon} alt="Windy" />
+                    UV Index
+                </div>
+
+                <div className="value">{forceCastData.current.uvi}</div>
+            </div>
+
+            <div className="grid-item wind-speed">
+                <div className="title">
+                    <img className="icon" src={windIcon} alt="Windy" />
+                    Speed
+                </div>
+
+                <div className="value">
+                    {forceCastData.current.wind_speed}
+                    <span className="unit">km/h</span>
+                </div>
+            </div>
+
+            <div className="grid-item sunrise">
+                <div className="title">
+                    <img className="icon" src={windIcon} alt="Windy" />
+                    Sunrise
+                </div>
+
+                <div className="value">
+                    {new Date(forceCastData.current.sunrise * 1000).getHours()}:
+                    {new Date(
+                        forceCastData.current.sunrise * 1000
+                    ).getMinutes()}
+                </div>
+            </div>
+
+            <div className="grid-item sunset">
+                <div className="title">
+                    <img className="icon" src={windIcon} alt="Windy" />
+                    Sunset
+                </div>
+
+                <div className="value">
+                    {new Date(forceCastData.current.sunset * 1000).getHours()}:
+                    {new Date(forceCastData.current.sunset * 1000).getMinutes()}
+                </div>
+            </div> */}
+        </ForceCast>
     );
 }
 
